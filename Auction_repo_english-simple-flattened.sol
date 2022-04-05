@@ -235,7 +235,8 @@ contract Auction_repo_english_simple is ERC1155MockReceiver // , Interface_to_v
 		, PERIODIC // monthly or sth
 	}
 	enum Fee_taker_role {
-		REFERER
+		__SKIPPER__ 
+		, REFERER
 		, AUTHOR
 	}
 	address public _user_proxy_registry ;
@@ -389,7 +390,6 @@ contract Auction_repo_english_simple is ERC1155MockReceiver // , Interface_to_v
         return 1;
 //		return extend_expiry_on_bid ( auction_info , _batch_hashid , block.timestamp ) ;
 	} // end function _bid
-
 	event OpenedAuction (
 		address _holder // 0
 		, address _target_contract  // 1
@@ -399,20 +399,65 @@ contract Auction_repo_english_simple is ERC1155MockReceiver // , Interface_to_v
 		, uint256 _expiry // 5
 		, bytes32 batch_hashid
 	) ;
+	struct Mint_data {
+		address _target_erc1155_contract ;
+		address _minter ;
+		string _itemid ; // es ;
+		uint256 _amount; //s ; // degenerate to =1
+		uint256 _author_royalty ;
+		address _to ; // oughta be minter address in case buyer calls
+	}
+	struct Sale_data {
+		address _target_erc1155_contract ;
+		address _seller ;
+		string _itemid ;
+		uint256 _amount ;
+		uint256 _price ;
+		address _referer ;
+		uint256 _refererfeerate ;
+		uint256 _starting_time ;
+		uint _expiry ;
+	}
 	function mint_begin_simple_and_bid (
 		address _target_contract
-		, address _author
-		, string memory _itemid
-		, uint256 _amounttomint
-		, uint256 _author_royalty
+		, Mint_data memory mintdata
+		, Sale_data memory saledata
+		, string memory signaturemint
+		, string memory signaturesale
+		, uint256 _bidamount
+	) public payable {
+		if ( verifysignature ( signaturemint , mintdata._minter ) ){}
+		else {revert("ERR() invalid mint signature"); }
+		if ( verifysignature ( signaturesale , saledata._seller ) ){}
+		else {revert("ERR() invalid sale signature");}
+		mint_begin_simple_and_bid_internal (
+			mintdata._target_erc1155_contract // 0
+			, mintdata._minter // 1
+			, mintdata._itemid // 2
+			, mintdata._amount // 3
+			, mintdata._author_royalty // 4
+			, saledata._seller // 5
+			, saledata._amount // 6
+			, saledata._price // 7
+			, saledata._starting_time // 8
+			, saledata._expiry // 9
+			, saledata._bidamount // 10
+		);
+	}
+	function mint_begin_simple_and_bid_internal (
+		address _target_contract // 0
+		, address _author // 1
+		, string memory _itemid // 2
+		, uint256 _amounttomint // 3
+		, uint256 _author_royalty // 4
 
-		, address _seller //		, uint256 _tokenid  // address
-		, uint256 _amounttoauction
-		, uint256 _offerprice
-		, uint _starting_time
-		, uint _expiry
+		, address _seller // 5		, uint256 _tokenid  // address
+		, uint256 _amounttoauction // 6
+		, uint256 _offerprice // 7
+		, uint _starting_time // 8
+		, uint _expiry // 9
 //		, uint _referer_feerate
-		, uint256 _bidprice
+		, uint256 _bidprice // 10
 //		, address _referer
 //		, address _to
 //		, bytes calldata _calldata

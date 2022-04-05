@@ -1,5 +1,4 @@
 
-
 pragma solidity ^0.8.0;
 // import "./OwnableDelegateProxy.sol";
 //	import "./Interfaces/IERC1155.sol" ;
@@ -9,6 +8,7 @@ pragma solidity ^0.8.0;
 import "./IERC1155.sol" ;
 import "./IAdmin_nft.sol" ;
 import "./IPayroll_fees.sol" ;
+import "./Verify_sig.sol" ;
 // import "./Utils.sol" ; XX
 // import "./Interfaces/Interface_to_vault.sol" ;
 // import "./OwnableDelegateProxy.sol";
@@ -41,8 +41,9 @@ interface Interface_to_vault {
 }
 contract Matcher_single_simple is // Ownable , Utils  ,
     Interface_to_vault
- {
-    function _asSingletonArray(uint256 element) private pure returns (uint256[] memory) {
+		, VerifySig
+{
+    function _asSingletonArray ( uint256 element ) private pure returns (uint256[] memory) {
 		uint256[] memory array = new uint256[](1);
 		array[0] = element;
 		return array;
@@ -58,21 +59,21 @@ contract Matcher_single_simple is // Ownable , Utils  ,
 		, PERIODIC // monthly or sth
 	}
 	enum Fee_taker_role {
-		REFERER
+		__SKIPPER__
+		, REFERER
 		, AUTHOR
 	}
-
 	address public _admincontract ;
 	address public _user_proxy_registry ;
 	address public _target_erc1155_contract_def ;
 	address public _payroll ;
 	address public _owner ; 
-  string public _version ; 
+  string public _version ;
 	constructor (
 			address __admincontract
 		, address __user_proxy_registry
 		, address __target_erc1155_contract_def
-        , string memory __version
+    , string memory __version
 	) {
 		_admincontract = __admincontract ;
 		_user_proxy_registry = __user_proxy_registry ;
@@ -116,14 +117,82 @@ contract Matcher_single_simple is // Ownable , Utils  ,
     bytes32 s;/* s parameter */
     uint8 v;	/* v parameter */
   }
-	struct Mint_data {
+	struct Mint_data_batch {
 		string [] _itemhashes ;
 		uint256 [] _amounts ; // degenerate to =1
 		uint256 [] _author_royalty ;
 		address _to ; // oughta be minter address in case buyer calls
 	}
+	/******* */
+	struct Mint_data {
+		address _target_erc1155_contract ; // 0
+		address _minter ; // 1
+		string _itemid ; // 2 es ;
+		uint256 _amount; // 3 s ; // degenerate to =1
+		uint256 _decimals ; // 4
+		uint256 _author_royalty ; // 5
+//		address _to ; // oughta be minter address in case buyer calls
+	}
+	struct Sale_data {
+		address _target_erc1155_contract ;
+		address _seller ;
+		string _itemid ;
+		uint256 _amount ;
+		uint256 _price ;
+		uint256 _starting_time ;
+		uint _expiry ;
+		address _referer ;
+		uint256 _refererfeerate ;
+	}
+	/******* 				// convert hash to integer		// players is an array of entrants */
+/** 	function verifysignature ( string memory signature , address _signer ) public pure returns (bool ){
+		return _signer == getsigneraddress ( signature ) ;
+	} */
+	function verify_mint_data ( Mint_data memory _mintdata 
+		, string memory _signature 
+	) public returns ( bool ){
+		address signer = _mintdata._minter ;
+		bytes32 hashed = keccak256 ( abi.encodePacked ( _mintdata ));
+		address signer_recovered = recoverSigner ( hashed , _signature ) ;
+		return signer == signer_recovered ;
+	}
+	function verify_sale_data ( Sale_data memory _saledata 
+		, string memory _signature
+	) public returns ( bool ){
+		address signer = _saledata._minter ;
+		bytes32 hashed = keccak256 ( abi.encodePacked ( _saledata ));
+		address signer_recovered = recoverSigner ( hashed , _signature ) ;
+		return signer == signer_recovered ;
+	}
 	function mint_and_match_single_simple (
-		address _target_erc1155_contract // 0
+			address _target_erc1155_contract // 0
+		, Mint_data memory mintdata
+		, Sale_data memory saledata
+		, string memory signaturemint
+		, string memory signaturesale
+	) public payable { // bytes32 signature = keccak256(abi.encodePacked( Mint_data ));
+//		if ( verifysignature( bytes( signaturemint) , mintdata._minter ) ){}
+		if ( verify_mint_data ( mintdata , signaturemint ) ){}
+		else { revert("ERR() invalid mint signature" ); }
+		//		return uint(keccak256(abi.encodePacked(block.difficulty, block.timestamp )));		// convert hash to integer		// players is an array of entrants
+//		if ( verifysignature( bytes(signaturesale) , saledata._seller )){}
+		if ( verify_sale_data ( saledata , signaturesale ) ){}
+		else {revert("ERR() invalid sale signature"); }
+		mint_and_match_single_simple_legacy (
+			mintdata._target_erc1155_contract //0
+			, mintdata._itemid //1
+			, mintdata._amount // 2
+			, mintdata._author_royalty // 3
+			, saledata._amount // 4
+			, saledata._price // 5
+			, mintdata._minter // 6
+			, saledata._seller // 7
+			, msg.sender // 8
+			, saledata._referer // 9
+		)	;
+	}
+	function mint_and_match_single_simple_legacy (
+			address _target_erc1155_contract // 0
 		, string memory _itemid //1 //		, uint256 _tokenid // 2 ignored for now
 		, uint256 _amounttomint // 2 
     , uint256 _author_royalty // 3 //        , uint256 _decimals // 5  //		, address _paymeans // 6
@@ -137,8 +206,7 @@ contract Matcher_single_simple is // Ownable , Utils  ,
 	) public payable {
 		require( _to != address(0) , "ERR() invalid beneficiary" );
 		require( _seller != address(0) , "ERR() invalid seller" );				
-		uint256 tokenid ;
-
+		uint256 tokenid ; // 10
 		if ( ( tokenid = IERC1155( _target_erc1155_contract)._itemhash_tokenid( _itemid ) ) == 0 ){
 			tokenid = IERC1155( _target_erc1155_contract ).mint (
 			_author // _sell er
@@ -253,7 +321,6 @@ contract Matcher_single_simple is // Ownable , Utils  ,
 		) ;
 	}
 
-
 	function only_owner_or_admin (address _address ) public returns ( bool )  {
 		if ( _address == _owner || IAdmin_nft( _admincontract )._admins( _address ) ){return true ; }
 		else {return false; } 
@@ -264,4 +331,3 @@ contract Matcher_single_simple is // Ownable , Utils  ,
 	}
 
 }
-

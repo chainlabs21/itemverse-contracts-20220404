@@ -29,7 +29,8 @@ contract Payroll_fees {
 	//	_erc1155_contract = __erc1155_contract;
 	}
 	enum Fee_taker_role {
-		REFERER
+		__SKIPPER__
+		, REFERER
 		, AUTHOR
 	}
 	function payout ( address [] memory _addresses , address __vault ) public {
