@@ -7,8 +7,6 @@ interface IVerifySig {
 	function splitSignature(bytes memory sig)		external	pure	returns (uint8, bytes32, bytes32) ;
 }
 contract VerifySig {
-
-
   function getsigneraddress (bytes memory sig) public view returns(address){
 		return isValidData ( sig ) ;
 	}

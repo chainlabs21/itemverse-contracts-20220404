@@ -39,9 +39,31 @@ interface Interface_to_vault {
 		, address _to //		, uint256 _tokenid_or_batchid
 	);
 }
+interface ISales {
+	struct Mint_data {
+		address _target_erc1155_contract ; // 0
+		address _minter ; // 1
+		string _itemid ; // 2 es ;
+		uint256 _amount; // 3 s ; // degenerate to =1
+		uint256 _decimals ; // 4
+		uint256 _author_royalty ; // 5 //		address _to ; // oughta be minter address in case buyer calls
+	}
+	struct Sale_data {
+		address _target_erc1155_contract ; // 0
+		address _seller ; // 1
+		string _itemid ; // 2
+		uint256 _amount ; // 3
+		uint256 _price ; // 4
+		uint256 _starting_time ; // 5
+		uint _expiry ; // 6
+		address _referer ; // 7
+		uint256 _refererfeerate ; // 8
+	}
+}
 contract Matcher_single_simple is // Ownable , Utils  ,
-    Interface_to_vault
-		, VerifySig
+	Interface_to_vault
+	, VerifySig
+	, ISales
 {
     function _asSingletonArray ( uint256 element ) private pure returns (uint256[] memory) {
 		uint256[] memory array = new uint256[](1);
@@ -124,33 +146,13 @@ contract Matcher_single_simple is // Ownable , Utils  ,
 		address _to ; // oughta be minter address in case buyer calls
 	}
 	/******* */
-	struct Mint_data {
-		address _target_erc1155_contract ; // 0
-		address _minter ; // 1
-		string _itemid ; // 2 es ;
-		uint256 _amount; // 3 s ; // degenerate to =1
-		uint256 _decimals ; // 4
-		uint256 _author_royalty ; // 5
-//		address _to ; // oughta be minter address in case buyer calls
-	}
-	struct Sale_data {
-		address _target_erc1155_contract ;
-		address _seller ;
-		string _itemid ;
-		uint256 _amount ;
-		uint256 _price ;
-		uint256 _starting_time ;
-		uint _expiry ;
-		address _referer ;
-		uint256 _refererfeerate ;
-	}
 	/******* 				// convert hash to integer		// players is an array of entrants */
 /** 	function verifysignature ( string memory signature , address _signer ) public pure returns (bool ){
 		return _signer == getsigneraddress ( signature ) ;
 	} */
 	function verify_mint_data ( Mint_data memory _mintdata 
-		, string memory _signature 
-	) public returns ( bool ){
+		, string memory _signature
+	) public returns ( bool ) {
 		address signer = _mintdata._minter ;
 		bytes32 hashed = keccak256 ( abi.encodePacked ( _mintdata ));
 		address signer_recovered = recoverSigner ( hashed , _signature ) ;
@@ -158,7 +160,7 @@ contract Matcher_single_simple is // Ownable , Utils  ,
 	}
 	function verify_sale_data ( Sale_data memory _saledata 
 		, string memory _signature
-	) public returns ( bool ){
+	) public returns ( bool ) {
 		address signer = _saledata._minter ;
 		bytes32 hashed = keccak256 ( abi.encodePacked ( _saledata ));
 		address signer_recovered = recoverSigner ( hashed , _signature ) ;

@@ -49,7 +49,6 @@ if ( true ) { let messageHashBytes = ethers.utils.arrayify( reskeccak )
 		LOGGER ( 'recoveredaddress' , recoveredaddress )
 	})
 }
-
 // For Solidity, we need the expanded-format of a signature
 
 if( false ) { const encoded // = web3.utils.soliditySha3 ( // web3.utils.abi.encodeParameters(
